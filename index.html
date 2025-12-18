@@ -1,61 +1,68 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test F1</title>
+    <title>Test F1: Raikkonen o Kubica</title>
     <style>
-        body { background-color: #121212; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 15px; border: 1px solid #333; max-width: 400px; margin: auto; }
-        button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-k { background: #d4af37; color: black; }
-        .btn-r { background: #ffffff; color: #003277; }
-        #resultado { display: none; }
+        body { background-color: #000; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
+        .caja { border: 2px solid #333; padding: 25px; border-radius: 15px; max-width: 450px; margin: 20px auto; background: #111; }
+        button { display: block; width: 100%; padding: 18px; margin: 12px 0; font-weight: bold; cursor: pointer; border-radius: 10px; border: none; font-size: 16px; }
+        .btn-opt { background: #333; color: white; transition: 0.3s; }
+        .btn-opt:active { background: #555; }
+        #resultado { display: none; color: #FFD700; }
+        #progreso { font-size: 14px; color: #888; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-    <div class="card" id="quiz">
-        <p id="progreso">Pregunta 1 de 7</p>
-        <h2 id="pregunta">¿Compañero de equipo?</h2>
-        <button class="btn-k" onclick="responder('kimi')" id="optA">Romain Grosjean</button>
-        <button class="btn-r" onclick="responder('kubica')" id="optB">Nick Heidfeld</button>
+
+    <div class="caja" id="quiz">
+        <div id="progreso">Pregunta 1 de 7</div>
+        <h2 id="pregunta">¿Cuál es tu estilo de conducción?</h2>
+        <button class="btn-opt" onclick="votar('k')" id="optA">Instintivo: Me adapto a lo que sea</button>
+        <button class="btn-opt" onclick="votar('r')" id="optB">Técnico: Análisis total de telemetría</button>
     </div>
 
-    <div class="card" id="resultado">
-        <h1 id="piloto-nombre"></h1>
-        <p id="descripcion"></p>
-        <button onclick="location.reload()" style="background:#444; color:white;">Reiniciar</button>
+    <div class="caja" id="resultado">
+        <h2>Tu piloto ideal es:</h2>
+        <h1 id="ganador"></h1>
+        <p id="desc"></p>
+        <button onclick="location.reload()" style="background: #444; color: white;">Reiniciar Test</button>
     </div>
 
     <script>
-        let pKimi = 0, pKubica = 0, actual = 0;
+        let k = 0, r = 0, i = 0;
+        
+        // El orden ha sido modificado: Compañero de equipo al final (pregunta 7)
         const preguntas = [
-            { q: "¿Compañero de equipo?", a: "Romain Grosjean", b: "Nick Heidfeld" },
-            { q: "¿Estilo de conducción?", a: "Instintivo: Me adapto", b: "Técnico: Análisis total" },
-            { q: "¿Qué prefieres por radio?", a: "Leave me alone!", b: "Dame toda la info" },
-            { q: "¿Estrategia de carrera?", a: "Ritmo y cuidar gomas", b: "Ataque y frenadas límite" },
-            { q: "¿Fuera de la pista?", a: "Fiesta o relax", b: "Rallies y más motor" },
-            { q: "¿Diseño de coche?", a: "Lotus Dorado", b: "BMW Blanco" },
-            { q: "¿Victoria épica?", a: "Abu Dhabi (El regreso)", b: "Canadá (La redención)" }
+            ["¿Cuál es tu estilo de conducción?", "Instintivo: Me adapto a lo que sea", "Técnico: Análisis total de telemetría"],
+            ["¿Qué prefieres escuchar por la radio?", "Leave me alone, I know what I'm doing", "Dame toda la información y gaps"],
+            ["¿Cuál es tu estrategia preferida?", "Ritmo constante y cuidar los neumáticos", "Ataque máximo y frenadas al límite"],
+            ["¿Qué haces al terminar una carrera?", "Pasar de la fama, relax o fiesta", "Analizar datos o correr en Rallies"],
+            ["¿Qué colores prefieres para tu coche?", "Dorado y Negro", "Blanco y Azul"],
+            ["¿Qué victoria te parece más épica?", "Abu Dhabi: El gran regreso tras 2 años", "Canadá: Redención tras un gran accidente"],
+            ["¿A quién prefieres como compañero de equipo?", "Romain Grosjean", "Nick Heidfeld"]
         ];
 
-        function responder(voto) {
-            if(voto === 'kimi') pKimi++; else pKubica++;
-            actual++;
-            if (actual < preguntas.length) {
-                document.getElementById('progreso').innerText = "Pregunta " + (actual + 1) + " de 7";
-                document.getElementById('pregunta').innerText = preguntas[actual].q;
-                document.getElementById('optA').innerText = preguntas[actual].a;
-                document.getElementById('optB').innerText = preguntas[actual].b;
+        function votar(v) {
+            if(v === 'k') k++; else r++;
+            i++;
+            
+            if (i < preguntas.length) {
+                document.getElementById('progreso').innerText = "Pregunta " + (i + 1) + " de 7";
+                document.getElementById('pregunta').innerText = preguntas[i][0];
+                document.getElementById('optA').innerText = preguntas[i][1];
+                document.getElementById('optB').innerText = preguntas[i][2];
             } else {
                 document.getElementById('quiz').style.display = 'none';
                 document.getElementById('resultado').style.display = 'block';
-                if(pKimi > pKubica) {
-                    document.getElementById('piloto-nombre').innerText = "Kimi Raikkonen";
-                    document.getElementById('descripcion').innerText = "Eres Iceman. Talento puro.";
+                
+                if(k > r) {
+                    document.getElementById('ganador').innerText = "Kimi Raikkonen (2012)";
+                    document.getElementById('desc').innerText = "Eres 'The Iceman'. Confías en tu instinto y prefieres que nadie te moleste mientras haces tu trabajo.";
                 } else {
-                    document.getElementById('piloto-nombre').innerText = "Robert Kubica";
-                    document.getElementById('descripcion').innerText = "Eres técnica y pasión.";
+                    document.getElementById('ganador').innerText = "Robert Kubica (2008)";
+                    document.getElementById('desc').innerText = "Eres pura precisión y análisis. Buscas la perfección técnica y vives por y para el motor.";
                 }
             }
         }
