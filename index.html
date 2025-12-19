@@ -1,77 +1,331 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test F1: Raikkonen o Kubica</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>F1 Experience: The Race</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        body { background-color: #000; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
-        .caja { border: 2px solid #333; padding: 25px; border-radius: 15px; max-width: 450px; margin: 20px auto; background: #111; }
+        body { background-color: #000; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 10px; margin: 0; overflow-x: hidden; touch-action: manipulation; }
+        .caja { border: 2px solid #333; padding: 20px; border-radius: 15px; max-width: 450px; margin: 20px auto; background: #111; position: relative; }
+        
+        /* Semáforo */
+        .semaforo { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; background: #222; padding: 15px; border-radius: 10px; }
+        .luz { width: 40px; height: 40px; background: #333; border-radius: 50%; border: 3px solid #111; transition: 0.3s; }
+        .luz.encendida { background: #ff0000; box-shadow: 0 0 20px #ff0000; }
+        
+        /* Barra Sectores */
+        .telemetria-bar { display: flex; gap: 5px; margin-bottom: 10px; height: 15px; width: 100%; }
+        .sector { flex: 1; background: #333; border-radius: 2px; transition: background 0.3s; }
+        .sector.verde { background: #00ff00; box-shadow: 0 0 5px #00ff00; }
+        .sector.rojo { background: #ff0000; box-shadow: 0 0 5px #ff0000; }
+
+        /* Mensajes */
+        #radio-msg, #pit-msg { color: #ffcc00; font-style: italic; font-size: 14px; min-height: 20px; margin-bottom: 10px; font-family: 'Courier New', monospace; }
+        .parpadeo { animation: blink 0.5s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Botones */
         button { display: block; width: 100%; padding: 18px; margin: 12px 0; font-weight: bold; cursor: pointer; border-radius: 10px; border: none; font-size: 16px; transition: 0.2s; }
         .btn-opt { background: #333; color: white; }
-        .btn-opt:active { background: #555; }
-        #resultado { display: none; }
-        .piloto-img { width: 100%; border-radius: 10px; margin-top: 20px; box-shadow: 0 4px 15px rgba(255,255,255,0.1); }
-        #ganador { color: #FFD700; font-size: 28px; margin-bottom: 5px; }
-        #progreso { font-size: 14px; color: #888; margin-bottom: 10px; }
+        .btn-start { background: #e10600; color: white; font-size: 20px; }
+        .btn-analisis { background: #444; color: #ccc; font-size: 14px; margin-top: 20px; }
+
+        /* PIT STOP */
+        #pitstop-intro, #pitstop-game { display: none; }
+        .coche-box { position: relative; width: 200px; height: 300px; margin: 0 auto; background: #222; border-radius: 20px; margin-top: 20px; }
+        .rueda { position: absolute; width: 50px; height: 80px; background: #e10600; border-radius: 10px; cursor: pointer; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; }
+        .rueda.changed { background: #00ff00; pointer-events: none; opacity: 0.5; }
+        .fl { top: 20px; left: -10px; } .fr { top: 20px; right: -10px; }
+        .rl { bottom: 20px; left: -10px; } .rr { bottom: 20px; right: -10px; }
+        .cockpit { position: absolute; top: 100px; left: 50%; transform: translateX(-50%); width: 60px; height: 100px; background: #444; border-radius: 30px; }
+
+        /* RESULTADO RASCA */
+        #quiz, #vuelta-rapida, #resultado { display: none; }
+        #contenedor-rasca { position: relative; width: 300px; height: 300px; margin: 0 auto; cursor: crosshair; }
+        .piloto-img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; position: absolute; top: 0; left: 0; z-index: 1; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 2; border-radius: 10px; touch-action: none; }
+        
+        .sector-box { font-size: 24px; font-weight: bold; padding: 15px; border-radius: 10px; margin: 10px 0; }
+        .verde-txt { background: #00ff00; color: #000; }
+        .rojo-txt { background: #ff0000; color: #fff; }
+        
+        #lista-respuestas { display: none; text-align: left; background: #222; padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 14px; }
+        .item-res { border-bottom: 1px solid #333; padding: 8px 0; display: flex; justify-content: space-between; }
+        .res-k { color: #d40000; font-weight: bold; } 
+        .res-r { color: #00aaff; font-weight: bold; }
     </style>
 </head>
 <body>
 
+    <audio id="musicaFondo" loop>
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-17.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="caja" id="inicio">
+        <h2>GRID DE SALIDA</h2>
+        <div class="semaforo">
+            <div id="l1" class="luz encendida"></div>
+            <div id="l2" class="luz encendida"></div>
+            <div id="l3" class="luz encendida"></div>
+        </div>
+        <p style="font-size: 12px; color: #666;">Al empezar se activará la radio del equipo</p>
+        <button class="btn-start" id="btnGo" onclick="iniciarSecuencia()">¿LISTO?</button>
+    </div>
+
     <div class="caja" id="quiz">
-        <div id="progreso">Pregunta 1 de 7</div>
-        <h2 id="pregunta">¿Cuál es tu estilo de conducción?</h2>
-        <button class="btn-opt" onclick="votar('k')" id="optA">Instintivo: Me adapto a lo que sea</button>
-        <button class="btn-opt" onclick="votar('r')" id="optB">Técnico: Análisis total de telemetría</button>
+        <div class="telemetria-bar">
+            <div id="s0" class="sector"></div>
+            <div id="s1" class="sector"></div>
+            <div id="s2" class="sector"></div>
+            <div id="s3" class="sector"></div>
+            <div id="s4" class="sector"></div>
+            <div id="s5" class="sector"></div>
+            <div id="s6" class="sector"></div>
+        </div>
+        <div id="radio-msg"></div>
+        <div id="progreso">Vuelta 1 de 7</div>
+        <h2 id="pregunta"></h2>
+        <button class="btn-opt" onclick="votar('k')" id="optA"></button>
+        <button class="btn-opt" onclick="votar('r')" id="optB"></button>
+    </div>
+
+    <div class="caja" id="pitstop-intro">
+        <h1 style="color:yellow; font-size: 40px;" class="parpadeo">BOX BOX BOX</h1>
+        <p>¡Entra en boxes para cambiar neumáticos!</p>
+        <p>Instrucciones: Pulsa las 4 ruedas rojas lo más rápido posible.</p>
+        <h2 id="countdown">10</h2>
+    </div>
+
+    <div class="caja" id="pitstop-game">
+        <h2>¡CAMBIA LAS RUEDAS!</h2>
+        <div id="pit-msg">Tiempo: 0.0s</div>
+        <div class="coche-box">
+            <div class="rueda fl" onclick="cambiarRueda(this)"></div>
+            <div class="rueda fr" onclick="cambiarRueda(this)"></div>
+            <div class="cockpit"></div>
+            <div class="rueda rl" onclick="cambiarRueda(this)"></div>
+            <div class="rueda rr" onclick="cambiarRueda(this)"></div>
+        </div>
+    </div>
+
+    <div class="caja" id="vuelta-rapida">
+        <h2>TELEMETRÍA DE CARRERA</h2>
+        <p>Tiempo total acumulado:</p>
+        <div id="sector-color" class="sector-box">00:00</div>
+        <p id="msg-tiempo"></p>
+        <p id="msg-pitstop" style="font-size: 14px; color: #aaa;"></p>
+        <button class="btn-start" onclick="celebrar()">¿QUIÉN ES TU PILOTO?</button>
     </div>
 
     <div class="caja" id="resultado">
-        <h2>Tu piloto ideal es:</h2>
-        <h1 id="ganador"></h1>
-        <div id="contenedor-img"></div>
-        <p id="desc" style="margin-top:15px; line-height: 1.5;"></p>
-        <button onclick="location.reload()" style="background: #444; color: white; margin-top: 20px;">Reiniciar Test</button>
+        <h2>¡RASCA LA BANDERA!</h2>
+        <p>Pasa el dedo por encima para descubrir al piloto.</p>
+        <div id="contenedor-rasca"></div>
+        <h1 id="ganador" style="display:none; margin-top:10px;"></h1>
+        <p id="desc" style="display:none;"></p>
+        <button class="btn-analisis" onclick="verDetalleVotos()">📊 Analizar Telemetría</button>
+        <div id="lista-respuestas"></div>
+        <button onclick="location.reload()" style="background:#222; color:white; margin-top:20px; border: 1px solid #444;">Repetir GP</button>
     </div>
 
     <script>
         let k = 0, r = 0, i = 0;
+        let totalTimeStart, preguntaInicio;
+        let registroRespuestas = [];
+        let tiresLeft = 4;
+        let pitStartTime, pitResultTime = 0;
+
         const preguntas = [
-            ["¿Cuál es tu estilo de conducción?", "Instintivo: Me adapto a lo que sea", "Técnico: Análisis total de telemetría"],
-            ["¿Qué prefieres escuchar por la radio?", "Leave me alone, I know what I'm doing", "Dame toda la información y gaps"],
-            ["¿Cuál es tu estrategia preferida?", "Ritmo constante y cuidar los neumáticos", "Ataque máximo y frenadas al límite"],
-            ["¿Qué haces al terminar una carrera?", "Pasar de la fama, relax o fiesta", "Analizar datos o correr en Rallies"],
-            ["¿Qué colores prefieres para tu coche?", "Dorado y Negro", "Blanco y Azul"],
-            ["¿Qué victoria te parece más épica?", "Abu Dhabi: El gran regreso tras 2 años", "Canadá: Redención tras un gran accidente"],
-            ["¿A quién prefieres como compañero de equipo?", "Romain Grosjean", "Nick Heidfeld"]
+            ["¿Cuál es tu estilo de conducción?", "Instintivo: Me adapto", "Técnico: Telemetría"],
+            ["¿Qué prefieres escuchar por la radio?", "Leave me alone...", "Dame toda la info"],
+            ["¿Cuál es tu estrategia?", "Ritmo constante", "Ataque máximo"],
+            ["¿Al terminar la carrera?", "Fiesta y relax", "Analizar datos"],
+            ["¿Qué colores prefieres?", "Dorado y Negro", "Blanco y Azul"],
+            ["¿Victoria épica?", "Abu Dhabi (Regreso)", "Canadá (Redención)"],
+            ["¿Compañero ideal?", "Romain Grosjean", "Nick Heidfeld"]
         ];
 
+        function iniciarSecuencia() {
+            // ACTIVAR MÚSICA AL PULSAR EL BOTÓN
+            const musica = document.getElementById('musicaFondo');
+            musica.volume = 0.4; // Volumen suave
+            musica.play().catch(e => console.log("Audio bloqueado"));
+
+            let luces = [document.getElementById('l1'), document.getElementById('l2'), document.getElementById('l3')];
+            document.getElementById('btnGo').disabled = true;
+            setTimeout(() => luces[0].classList.remove('encendida'), 800);
+            setTimeout(() => luces[1].classList.remove('encendida'), 1600);
+            setTimeout(() => {
+                luces[2].classList.remove('encendida');
+                setTimeout(empezarTest, 400);
+            }, 2400);
+        }
+
+        function empezarTest() {
+            document.getElementById('inicio').style.display = 'none';
+            document.getElementById('quiz').style.display = 'block';
+            totalTimeStart = new Date();
+            preguntaInicio = new Date();
+            actualizarPregunta();
+        }
+
+        function actualizarPregunta() {
+            document.getElementById('progreso').innerText = "Vuelta " + (i + 1) + " de 7";
+            document.getElementById('pregunta').innerText = preguntas[i][0];
+            document.getElementById('optA').innerText = preguntas[i][1];
+            document.getElementById('optB').innerText = preguntas[i][2];
+            preguntaInicio = new Date();
+        }
+
         function votar(v) {
+            let pilotoElegido = (v === 'k') ? "Kimi" : "Robert";
+            registroRespuestas.push({ vuelta: i + 1, piloto: pilotoElegido });
+            let ahora = new Date();
+            let tiempoPregunta = (ahora - preguntaInicio) / 1000;
+            let sectorDiv = document.getElementById('s' + i);
+            let radio = document.getElementById('radio-msg');
+
+            if(tiempoPregunta <= 13) {
+                sectorDiv.classList.add('verde');
+                radio.innerText = "";
+            } else {
+                sectorDiv.classList.add('rojo');
+                radio.innerText = "📻 ENG: Push harder! We are losing time!";
+                radio.classList.add('parpadeo');
+                setTimeout(() => radio.classList.remove('parpadeo'), 2000);
+            }
+
             if(v === 'k') k++; else r++;
             i++;
-            if (i < preguntas.length) {
-                document.getElementById('progreso').innerText = "Pregunta " + (i + 1) + " de 7";
-                document.getElementById('pregunta').innerText = preguntas[i][0];
-                document.getElementById('optA').innerText = preguntas[i][1];
-                document.getElementById('optB').innerText = preguntas[i][2];
+
+            if (i === 4) {
+                setTimeout(iniciarIntroPitStop, 500); 
+            } else if (i < preguntas.length) {
+                setTimeout(actualizarPregunta, 200);
             } else {
-                mostrarFin();
+                analizarTiempo();
             }
         }
 
-        function mostrarFin() {
+        function iniciarIntroPitStop() {
             document.getElementById('quiz').style.display = 'none';
-            document.getElementById('resultado').style.display = 'block';
-            let imgCont = document.getElementById('contenedor-img');
-            
-            if(k > r) {
-                document.getElementById('ganador').innerText = "Kimi Raikkonen (2012)";
-                document.getElementById('desc').innerText = "Eres 'The Iceman'. Confías en tu instinto, no te andas con rodeos y prefieres que nadie te moleste mientras haces tu trabajo.";
-                imgCont.innerHTML = '<img src="kimi.jpg" class="piloto-img" alt="Kimi Raikkonen">';
-            } else {
-                document.getElementById('ganador').innerText = "Robert Kubica (2008)";
-                document.getElementById('desc').innerText = "Eres pura precisión y pasión técnica. Como Robert, buscas la perfección en cada detalle y tu vida gira en torno al motor.";
-                imgCont.innerHTML = '<img src="kubica.jpg" class="piloto-img" alt="Robert Kubica">';
+            document.getElementById('pitstop-intro').style.display = 'block';
+            let count = 10;
+            let timer = setInterval(() => {
+                count--;
+                document.getElementById('countdown').innerText = count;
+                if(count <= 0) {
+                    clearInterval(timer);
+                    empezarJuegoPit();
+                }
+            }, 1000);
+        }
+
+        function empezarJuegoPit() {
+            document.getElementById('pitstop-intro').style.display = 'none';
+            document.getElementById('pitstop-game').style.display = 'block';
+            pitStartTime = new Date();
+            tiresLeft = 4;
+        }
+
+        function cambiarRueda(elemento) {
+            if(!elemento.classList.contains('changed')) {
+                elemento.classList.add('changed');
+                elemento.innerText = "OK";
+                tiresLeft--;
+                if(tiresLeft === 0) finalizarPitStop();
             }
+        }
+
+        function finalizarPitStop() {
+            pitResultTime = (new Date() - pitStartTime) / 1000;
+            let msg = document.getElementById('pit-msg');
+            msg.innerText = "Tiempo Pit Stop: " + pitResultTime.toFixed(2) + "s";
+            if(pitResultTime <= 3.0) msg.style.color = "#00ff00";
+            else msg.style.color = "red";
+
+            setTimeout(() => {
+                document.getElementById('pitstop-game').style.display = 'none';
+                document.getElementById('quiz').style.display = 'block';
+                actualizarPregunta();
+            }, 2000);
+        }
+
+        function analizarTiempo() {
+            let tiempoTotal = (new Date() - totalTimeStart) / 1000;
+            document.getElementById('quiz').style.display = 'none';
+            document.getElementById('vuelta-rapida').style.display = 'block';
+            let display = document.getElementById('sector-color');
+            display.innerText = tiempoTotal.toFixed(2) + "s";
+            if(tiempoTotal <= 95) display.className = "sector-box verde-txt";
+            else display.className = "sector-box rojo-txt";
+            document.getElementById('msg-pitstop').innerText = `Tiempo en boxes: ${pitResultTime.toFixed(2)}s`;
+        }
+
+        function celebrar() {
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            setTimeout(configurarRasca, 1500);
+        }
+
+        function configurarRasca() {
+            document.getElementById('vuelta-rapida').style.display = 'none';
+            document.getElementById('resultado').style.display = 'block';
+            let imgFile = (k > r) ? "kimi.jpg" : "kubica.jpg";
+            let nombre = (k > r) ? "Kimi Raikkonen" : "Robert Kubica";
+            let desc = (k > r) ? "Eres 'The Iceman'." : "Eres pura precisión técnica.";
+            document.getElementById('ganador').innerText = nombre;
+            document.getElementById('desc').innerText = desc;
+            let container = document.getElementById('contenedor-rasca');
+            container.innerHTML = `<img src="${imgFile}" class="piloto-img" draggable="false"><canvas id="scratchCanvas" width="300" height="300"></canvas>`;
+            initCanvas();
+        }
+
+        function verDetalleVotos() {
+            let lista = document.getElementById('lista-respuestas');
+            lista.style.display = (lista.style.display === 'block') ? 'none' : 'block';
+            let html = `<div style="text-align:center; margin-bottom:10px;">Resultado: Kimi ${k} - ${r} Robert</div>`;
+            registroRespuestas.forEach(r => {
+                let colorClass = (r.piloto === 'Kimi') ? 'res-k' : 'res-r';
+                html += `<div class="item-res"><span>Vuelta ${r.vuelta}</span> <span class="${colorClass}">${r.piloto}</span></div>`;
+            });
+            lista.innerHTML = html;
+        }
+
+        function initCanvas() {
+            let canvas = document.getElementById('scratchCanvas');
+            let ctx = canvas.getContext('2d');
+            ctx.fillStyle = "#fff"; ctx.fillRect(0,0,300,300);
+            ctx.fillStyle = "#000";
+            for(let y=0; y<300; y+=30) {
+                for(let x=0; x<300; x+=30) {
+                    if ((x/30 + y/30) % 2 === 0) ctx.fillRect(x, y, 30, 30);
+                }
+            }
+            ctx.globalCompositeOperation = 'destination-out';
+            let isDrawing = false;
+            function scratch(x, y) {
+                ctx.beginPath(); ctx.arc(x, y, 25, 0, 2 * Math.PI); ctx.fill();
+                document.getElementById('ganador').style.display = 'block';
+                document.getElementById('desc').style.display = 'block';
+            }
+            canvas.addEventListener('mousedown', () => isDrawing = true);
+            canvas.addEventListener('mouseup', () => isDrawing = false);
+            canvas.addEventListener('mousemove', (e) => {
+                if(!isDrawing) return;
+                let rect = canvas.getBoundingClientRect();
+                scratch(e.clientX - rect.left, e.clientY - rect.top);
+            });
+            canvas.addEventListener('touchstart', (e) => { isDrawing = true; e.preventDefault(); });
+            canvas.addEventListener('touchend', () => isDrawing = false);
+            canvas.addEventListener('touchmove', (e) => {
+                if(!isDrawing) return;
+                e.preventDefault();
+                let rect = canvas.getBoundingClientRect();
+                let touch = e.touches[0];
+                scratch(touch.clientX - rect.left, touch.clientY - rect.top);
+            });
         }
     </script>
 </body>
